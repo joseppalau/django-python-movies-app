@@ -4,8 +4,7 @@ from airtable import Airtable
 import os
 
 
-AT = Airtable(os.environ.get('AIRTABLE_MOVIESTABLE_BASE_ID'),
-              'Movies',
+AT = Airtable(os.environ.get('AIRTABLE_MOVIESTABLE_BASE_ID'),'Movies',
               api_key=os.environ.get('AIRTABLE_API_KEY'))
 
 # Create your views here.
@@ -20,26 +19,34 @@ def create(request):
     if request.method == 'POST':
         data = {
             'Name': request.POST.get('name'),
-            'Pictures': [{'url': request.POST.get('url')}],
+            'Pictures': [{'url': request.POST.get('url') or 'http://www.lakeshorechamber.org/wp-content/uploads/2018/07/Photo-Not-Available.png'}],
             'Rating': int(request.POST.get('rating')),
             'Notes': request.POST.get('notes')
         }
-
-        AT.insert(data)
+        response = AT.insert(data)
+        messages.success(request, 'New Movie created: {}'.format(response['fields'].get('Name')))
     return redirect('/')
-
 
 def edit(request, movie_id):
     if request.method == 'POST':
         data = {
             'Name': request.POST.get('name'),
-            'Pictures': [{'url': request.POST.get('url')}],
+            'Pictures': [{'url': request.POST.get('url') or 'http://www.lakeshorechamber.org/wp-content/uploads/2018/07/Photo-Not-Available.png'}],
             'Rating': int(request.POST.get('rating')),
             'Notes': request.POST.get('notes')
         }
-        AT.update(movie_id, data)
+        try:
+            response = AT.update(movie_id, data)
+            messages.success(request, 'Movie Edited: {}'.format(response['fields'].get('Name')))
+        except Exception as e:
+            message.warning(request, 'Got an error when trying to edit {}'.format(e))
     return redirect('/')
 
 def delete(request, movie_id):
-    AT.delete(movie_id)
+    movie_name = AT.get(movie_id)['fields'].get('Name')
+    try:
+        response = AT.delete(movie_id)
+        messages.warning(request, 'Deleted movie: {}'.format(movie_name))
+    except Exception as e:
+        message.warning(request, 'Got an error when trying to delete {}'.format(e))
     return redirect('/')
